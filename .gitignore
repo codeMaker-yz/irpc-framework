@@ -1,0 +1,5 @@
+# Project exclude paths
+/irpc-framework-core/target/
+/irpc-framework-interface/target/
+
+.idea
