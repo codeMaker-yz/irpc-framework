@@ -18,3 +18,34 @@ Netty定义了两个重要的ChannelHandler子接口：
 根据事件的起源，事件会被ChannelInboundHandler或者ChannelOutboundHandler处理。随后调用ChannelHandlerContext实现，将被转发给同一超类型的下一个ChannelHandler。
 入站事件触发，会从ChannelPipeline的头部开始一直传播到ChannelPipeline的尾部
 出站事件触发，会从ChannelPipeline的尾部开始一直传播到ChannelPipeline的头部
+
+## 代理层开发
+
+netty内部数据传输，要考虑拆包和粘包部分的逻辑。
+
+解决手段：
+- 固定长度文本传输
+- 特殊分割字符传输
+- 固定协议传输
+
+项目使用自定义协议的方式，见RpcEncoder和RpcDecoder
+
+客户端通过一个代理工厂获取被调用对象的代理对象，然后通过代理对象将数据放入发送队列，最后会有一个异步线程将发送队列内部的数据一个个地发送到服务端，并等待服务端响应对应的数据结果。
+
+核心思想：将请求发送任务交给单独的IO线程去负责，实现异步化，提升发送性能。
+
+代理工厂部分的设计：JDKProxyFactory
+```java
+public class JDKProxyFactory implements ProxyFactory {
+
+    @Override
+    public <T> T getProxy(final Class clazz) {
+        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz},
+                new JDKClientInvocationHandler(clazz));
+    }
+
+}
+```
+主要是JDKClientInvocationHandler()的实现，核心任务是将需要调用的方法名称、服务名称，参数统统都封装好到RpcInvocation中，然后添加进一个阻塞队列，并等待服务端的数据返回。
+
+
