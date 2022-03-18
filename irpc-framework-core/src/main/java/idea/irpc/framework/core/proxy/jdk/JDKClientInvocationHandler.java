@@ -36,6 +36,7 @@ public class JDKClientInvocationHandler implements InvocationHandler {
         RESP_MAP.put(rpcInvocation.getUuid(),OBJECT);
         SEND_QUEUE.add(rpcInvocation);
         long beginTime = System.currentTimeMillis();
+
         while (System.currentTimeMillis() - beginTime < 3 * 1000){
             Object object = RESP_MAP.get(rpcInvocation.getUuid());
             if(object instanceof RpcInvocation){

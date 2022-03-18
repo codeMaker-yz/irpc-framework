@@ -6,6 +6,7 @@ import idea.irpc.framework.core.common.RpcProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
 
@@ -15,6 +16,7 @@ import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_C
  * @author ：Mr.Zhang
  * @date ：Created in 2022/3/3 18:58
  */
+@Slf4j
 public class ServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -22,7 +24,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         String json = new String(rpcProtocol.getContent(),0,rpcProtocol.getContentLength());
         RpcInvocation rpcInvocation = JSON.parseObject(json, RpcInvocation.class);
 
-        //这里的PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
+        log.info("serverHandler............" + System.currentTimeMillis());
+        //PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
         Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
 
         Method[] methods = aimObject.getClass().getDeclaredMethods();
@@ -40,11 +43,14 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
+
         rpcInvocation.setResponse(result);
         RpcProtocol respRpcProtocol = new RpcProtocol(JSON.toJSONString(rpcInvocation).getBytes());
         ctx.writeAndFlush(respRpcProtocol);
 
     }
+
+
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

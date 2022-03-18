@@ -2,7 +2,12 @@ package idea.irpc.framework.core.server;
 
 import idea.irpc.framework.core.common.RpcDecoder;
 import idea.irpc.framework.core.common.RpcEncoder;
+import idea.irpc.framework.core.common.config.PropertiesBootstrap;
 import idea.irpc.framework.core.common.config.ServerConfig;
+import idea.irpc.framework.core.common.utils.CommonUtils;
+import idea.irpc.framework.core.registy.RegistryService;
+import idea.irpc.framework.core.registy.URL;
+import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -12,6 +17,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_URL_SET;
 
 
 public class Server {
@@ -20,6 +26,8 @@ public class Server {
     private static EventLoopGroup workerGroup = null;
 
     private ServerConfig serverConfig;
+
+    private RegistryService registryService;
 
     public ServerConfig getServerConfig() {
         return serverConfig;
@@ -57,36 +65,69 @@ public class Server {
                     @Override
                     //连接建立后，调用初始化方法
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        System.out.println("初始化provider过程");
+                        System.out.println("server Init provider........."+ System.currentTimeMillis());
                         socketChannel.pipeline().addLast(new RpcEncoder());
                         socketChannel.pipeline().addLast(new RpcDecoder());
                         socketChannel.pipeline().addLast(new ServerHandler());
                     }
                 });
         //5.绑定监听端口
-        bootstrap.bind(serverConfig.getPort()).sync();
+        this.batchExportUrl();
+        bootstrap.bind(serverConfig.getServerPort()).sync();
 
     }
 
-    public void registerService(Object serviceBean) {
-        if (serviceBean.getClass().getInterfaces().length == 0) {
-            throw new RuntimeException("service must had interfaces!");
+    public void initServerConfig(){
+        ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
+        this.setServerConfig(serverConfig);
+    }
+
+    public void exportService(Object serviceBean){
+        if(serviceBean.getClass().getInterfaces().length == 0){
+            throw new RuntimeException("service must had interfaces");
         }
         Class[] classes = serviceBean.getClass().getInterfaces();
-        if (classes.length > 1) {
-            throw new RuntimeException("service must only had one interfaces!");
+        if(classes.length > 1){
+            throw new RuntimeException("service must only had one interfaces");
         }
+        if(registryService == null){
+            registryService = new ZookeeperRegister(serverConfig.getRegisterAddr());
+        }
+        //默认选择该对象的第一个实现接口
         Class interfaceClass = classes[0];
         PROVIDER_CLASS_MAP.put(interfaceClass.getName(), serviceBean);
+        URL url = new URL();
+        url.setServiceName(interfaceClass.getName());
+        url.setApplicationName(serverConfig.getApplicationName());
+        url.addParameter("host", CommonUtils.getIpAddress());
+        url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
+        PROVIDER_URL_SET.add(url);
+
     }
+
+    public void batchExportUrl(){
+        Thread task = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(2500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                for (URL url : PROVIDER_URL_SET) {
+                    registryService.register(url);
+                }
+            }
+        });
+        task.start();
+    }
+
 
 
     public static void main(String[] args) throws InterruptedException {
         Server server = new Server();
-        ServerConfig serverConfig = new ServerConfig();
-        serverConfig.setPort(9090);
-        server.setServerConfig(serverConfig);
-        server.registerService(new DataServiceImpl());
+        server.initServerConfig();
+        server.exportService(new DataServiceImpl());
         server.startApplication();
     }
 }
