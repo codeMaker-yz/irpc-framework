@@ -48,4 +48,8 @@ public class JDKProxyFactory implements ProxyFactory {
 ```
 主要是JDKClientInvocationHandler()的实现，核心任务是将需要调用的方法名称、服务名称，参数统统都封装好到RpcInvocation中，然后添加进一个阻塞队列，并等待服务端的数据返回。
 
+## 注册中心的接入与实现
+
+新增一个第三方平台，每个服务暴露的时候，将相关信息记录到中间平台。当有调用方订阅服务的时候，预先到中间平台进行登记。当服务提供者下线的时候，需要到该平台去将之前的记录移除，然后由平台通知给服务调用方。
+
 
