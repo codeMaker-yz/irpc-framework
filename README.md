@@ -53,3 +53,165 @@ public class JDKProxyFactory implements ProxyFactory {
 新增一个第三方平台，每个服务暴露的时候，将相关信息记录到中间平台。当有调用方订阅服务的时候，预先到中间平台进行登记。当服务提供者下线的时候，需要到该平台去将之前的记录移除，然后由平台通知给服务调用方。
 
 
+引入事件的设计思路，主要目的是解耦。
+当监听到某个节点数据发生更新之后，会发生一个节点更新事件，然后在事件的监听端对不同的行为做不同的事件处理。
+
+事件监听机制设计代码：
+
+定义一个抽象的事件，该事件用于装载需要传递的数据信息：
+```java
+public interface IRpcEvent{
+    Object getData();
+    IRpcEvent setData(Object data);
+}
+```
+
+定义一个节点更新事件：
+
+```java
+public class IRpcUpdateEvent implements IRpcEvent {
+
+    private Object data;
+
+    public IRpcUpdateEvent(Object data) {
+        this.data = data;
+    }
+
+    @Override
+    public Object getData() {
+        return data;
+    }
+
+    @Override
+    public IRpcEvent setData(Object data) {
+        this.data = data;
+        return this;
+    }
+}
+```
+当zookeeper的某个节点发生数据变动的时候，就会发送一个变更事件，然后由对应的监听器去捕获这些数据并做处理。
+
+监听器接口设计如下：
+```java
+public interface IRpcListener<T> {
+
+    void callBack(Object t);
+
+}
+```
+定义好了统一的事件规范，监听接口，那么下边就需要有专门的类去发送事件了：
+```java
+public class IRpcListenerLoader {
+
+    private static List<IRpcListener> iRpcListenerList = new ArrayList<>();
+
+    private static ExecutorService eventThreadPool = Executors.newFixedThreadPool(2);
+
+    public static void registerListener(IRpcListener iRpcListener) {
+        iRpcListenerList.add(iRpcListener);
+    }
+
+    public void init() {
+        registerListener(new ServiceUpdateListener());
+    }
+
+    /**
+     * 获取接口上的泛型T
+     *
+     * @param o     接口
+     */
+    public static Class<?> getInterfaceT(Object o) {
+        Type[] types = o.getClass().getGenericInterfaces();
+        ParameterizedType parameterizedType = (ParameterizedType) types[0];
+        Type type = parameterizedType.getActualTypeArguments()[0];
+        if (type instanceof Class<?>) {
+            return (Class<?>) type;
+        }
+        return null;
+    }
+
+    public static void sendEvent(IRpcEvent iRpcEvent) {
+        if(CommonUtils.isEmptyList(iRpcListenerList)){
+            return;
+        }
+        for (IRpcListener<?> iRpcListener : iRpcListenerList) {
+            Class<?> type = getInterfaceT(iRpcListener);
+            if(type.equals(iRpcEvent.getClass())){
+                eventThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            iRpcListener.callBack(iRpcEvent.getData());
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+```
+zk的服务提供者节点发生了变更，客户端需要更新本地的一个目标服务列表，避免向无用的服务发送请求。
+实现类：
+```java
+public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUpdateListener.class);
+
+    @Override
+    public void callBack(Object t) {
+        //获取到子节点的数据信息
+        URLChangeWrapper urlChangeWrapper = (URLChangeWrapper) t;
+        List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(urlChangeWrapper.getServiceName());
+        if (CommonUtils.isEmptyList(channelFutureWrappers)) {
+            LOGGER.error("[ServiceUpdateListener] channelFutureWrappers is empty");
+            return;
+        } else {
+            List<String> matchProviderUrl = urlChangeWrapper.getProviderUrl();
+            Set<String> finalUrl = new HashSet<>();
+            List<ChannelFutureWrapper> finalChannelFutureWrappers = new ArrayList<>();
+            for (ChannelFutureWrapper channelFutureWrapper : channelFutureWrappers) {
+                String oldServerAddress = channelFutureWrapper.getHost() + ":" + channelFutureWrapper.getPort();
+                //如果老的url没有，说明已经被移除了
+                if (!matchProviderUrl.contains(oldServerAddress)) {
+                    continue;
+                } else {
+                    finalChannelFutureWrappers.add(channelFutureWrapper);
+                    finalUrl.add(oldServerAddress);
+                }
+            }
+            //此时老的url已经被移除了，开始检查是否有新的url
+            //ChannelFutureWrapper其实是一个自定义的包装类，将netty建立好的ChannelFuture做了一些封装
+            List<ChannelFutureWrapper> newChannelFutureWrapper = new ArrayList<>();
+            for (String newProviderUrl : matchProviderUrl) {
+                if (!finalUrl.contains(newProviderUrl)) {
+                    ChannelFutureWrapper channelFutureWrapper = new ChannelFutureWrapper();
+                    String host = newProviderUrl.split(":")[0];
+                    Integer port = Integer.valueOf(newProviderUrl.split(":")[1]);
+                    channelFutureWrapper.setPort(port);
+                    channelFutureWrapper.setHost(host);
+                    ChannelFuture channelFuture = null;
+                    try {
+                        channelFuture = ConnectionHandler.createChannelFuture(host,port);
+                        channelFutureWrapper.setChannelFuture(channelFuture);
+                        newChannelFutureWrapper.add(channelFutureWrapper);
+                        finalUrl.add(newProviderUrl);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            finalChannelFutureWrappers.addAll(newChannelFutureWrapper);
+            //最终更新服务在这里
+            CONNECT_MAP.put(urlChangeWrapper.getServiceName(),finalChannelFutureWrappers);
+        }
+    }
+}
+```
+
+## 序列化
+
+传输过程中，数据需要以字节数组形式传输，常见的序列化技术有以下几类：Hessian、Kryo、JDK、FastJson。为了能兼容各类不同的序列化框架，在IRpc框架内部抽离了一层序列化层，专门用于对接市面上常见的序列化技术框架。
+
+
