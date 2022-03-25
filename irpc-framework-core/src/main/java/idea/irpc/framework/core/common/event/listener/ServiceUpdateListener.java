@@ -25,7 +25,7 @@ public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServiceUpdateListener.class);
     @Override
     public void callBack(Object t) {
-        //获取到字节点的数据信息
+        //获取到子节点的数据信息
         URLChangeWrapper urlChangeWrapper = (URLChangeWrapper)t;
         List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(urlChangeWrapper.getServiceName());
         if(CommonUtils.isEmptyList(channelFutureWrappers)){

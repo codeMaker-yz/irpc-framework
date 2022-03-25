@@ -106,22 +106,18 @@ public class Server {
     }
 
     public void batchExportUrl(){
-        Thread task = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(2500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                for (URL url : PROVIDER_URL_SET) {
-                    registryService.register(url);
-                }
+        Thread task = new Thread(() -> {
+            try {
+                Thread.sleep(2500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            for (URL url : PROVIDER_URL_SET) {
+                registryService.register(url);
             }
         });
         task.start();
     }
-
 
 
     public static void main(String[] args) throws InterruptedException {

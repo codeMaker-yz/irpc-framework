@@ -43,7 +43,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
-
         rpcInvocation.setResponse(result);
         RpcProtocol respRpcProtocol = new RpcProtocol(JSON.toJSONString(rpcInvocation).getBytes());
         ctx.writeAndFlush(respRpcProtocol);

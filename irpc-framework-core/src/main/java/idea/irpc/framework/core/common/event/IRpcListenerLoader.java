@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import idea.irpc.framework.core.common.event.listener.ProviderNodeDataChangeListener;
 import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.common.event.listener.ServiceUpdateListener;
 
@@ -24,6 +26,7 @@ public class IRpcListenerLoader {
 
     public void init() {
         registerListener(new ServiceUpdateListener());
+        registerListener(new ProviderNodeDataChangeListener());
     }
 
     /**

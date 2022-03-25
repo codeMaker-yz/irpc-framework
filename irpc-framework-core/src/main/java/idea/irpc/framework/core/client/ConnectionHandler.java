@@ -2,21 +2,23 @@ package idea.irpc.framework.core.client;
 
 import idea.irpc.framework.core.common.ChannelFutureWrapper;
 import idea.irpc.framework.core.common.utils.CommonUtils;
+import idea.irpc.framework.core.router.Selector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import static idea.irpc.framework.core.common.cache.CommonClientCache.CONNECT_MAP;
-import static idea.irpc.framework.core.common.cache.CommonClientCache.SERVER_ADDRESS;
+import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
 
 /**
  * @author ：Mr.Zhang
  * @date ：Created in 2022/3/12 15:28
  */
+@Slf4j
 public class ConnectionHandler {
     /**
      * 核心的连接处理器
@@ -49,10 +51,13 @@ public class ConnectionHandler {
         Integer port = Integer.parseInt(providerAddress[1]);
         //到底这个channelFuture里面是什么
         ChannelFuture channelFuture = bootstrap.connect(ip, port).sync();
+        String providerURLInfo = URL_MAP.get(providerServiceName).get(providerIp);
+        log.info("providerURLInfo: " + providerURLInfo);
         ChannelFutureWrapper channelFutureWrapper = new ChannelFutureWrapper();
         channelFutureWrapper.setChannelFuture(channelFuture);
         channelFutureWrapper.setHost(ip);
         channelFutureWrapper.setPort(port);
+        channelFutureWrapper.setWeight(Integer.valueOf(providerURLInfo.substring(providerURLInfo.lastIndexOf(";")+1)));
         SERVER_ADDRESS.add(providerIp);
         List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(providerServiceName);
         if (CommonUtils.isEmptyList(channelFutureWrappers)) {
@@ -60,6 +65,10 @@ public class ConnectionHandler {
         }
         channelFutureWrappers.add(channelFutureWrapper);
         CONNECT_MAP.put(providerServiceName, channelFutureWrappers);
+        Selector selector = new Selector();
+        selector.setProviderServiceName(providerServiceName);
+        IROUTER.refreshRouterArr(selector);
+
     }
 
     /**
