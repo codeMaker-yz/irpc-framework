@@ -1,11 +1,12 @@
 package idea.irpc.framework.core.common.cache;
 
 import idea.irpc.framework.core.registy.URL;
+import idea.irpc.framework.core.serialize.SerializeFactory;
+import io.netty.util.internal.ConcurrentSet;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author ：Mr.Zhang
@@ -13,6 +14,9 @@ import java.util.Set;
  */
 public class CommonServerCache {
 
-    public static final Map<String,Object> PROVIDER_CLASS_MAP = new HashMap<>();
-    public static final Set<URL> PROVIDER_URL_SET = new HashSet<>();
+    public static final Map<String,Object> PROVIDER_CLASS_MAP = new ConcurrentHashMap<>();
+    public static final Set<URL> PROVIDER_URL_SET = new ConcurrentSet<>();
+
+
+    public static SerializeFactory SERVER_SERIALIZE_FACTORY;
 }

@@ -15,6 +15,10 @@ import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
 import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import idea.irpc.framework.core.router.RandomRouterImpl;
 import idea.irpc.framework.core.router.RotateRouterImpl;
+import idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory;
+import idea.irpc.framework.core.serialize.hessian.HessianSerializeFactory;
+import idea.irpc.framework.core.serialize.jdk.JdkSerializeFactory;
+import idea.irpc.framework.core.serialize.kryo.KryoSerializeFactory;
 import idea.irpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -33,8 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
-import static idea.irpc.framework.core.common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
-import static idea.irpc.framework.core.common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
+import static idea.irpc.framework.core.common.constants.RpcConstants.*;
 
 /**
  * @author ：Mr.Zhang
@@ -172,11 +175,34 @@ public class Client {
     private void initClientConfig() {
         //初始化路由策略
         String routerStrategy = clientConfig.getRouterStrategy();
-        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
-            IROUTER = new RandomRouterImpl();
-        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
-            IROUTER = new RotateRouterImpl();
+        switch (routerStrategy){
+            case RANDOM_ROUTER_TYPE:
+                IROUTER = new RandomRouterImpl();
+                break;
+            case ROTATE_ROUTER_TYPE:
+                IROUTER = new RotateRouterImpl();
+                break;
+            default:
+                throw new RuntimeException("no match routeStrategy for " + routerStrategy);
         }
+        String clientSerialize = clientConfig.getClientSerialize();
+        switch (clientSerialize){
+            case JDK_SERIALIZE_TYPE:
+                CLIENT_SERIALIZE_FACTORY = new JdkSerializeFactory();
+                break;
+            case FAST_JSON_SERIALIZE_TYPE:
+                CLIENT_SERIALIZE_FACTORY = new FastJsonSerializeFactory();
+                break;
+            case HESSIAN2_SERIALIZE_TYPE:
+                CLIENT_SERIALIZE_FACTORY = new HessianSerializeFactory();
+                break;
+            case KRYO_SERIALIZE_TYPE:
+                CLIENT_SERIALIZE_FACTORY = new KryoSerializeFactory();
+                break;
+            default:
+                throw new RuntimeException("no match serialize type for " + clientSerialize);
+        }
+
     }
 
     public static void main(String[] args) throws Throwable {

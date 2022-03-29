@@ -11,6 +11,11 @@ public class ServerConfig {
 
     private String applicationName;
 
+    /**
+     * 服务端序列化方式 example： hession2,kryo,jdk,fastJson
+     */
+    private String serverSerialize;
+
     public String getRegisterAddr() {
         return registerAddr;
     }
@@ -33,5 +38,13 @@ public class ServerConfig {
 
     public void setApplicationName(String applicationName) {
         this.applicationName = applicationName;
+    }
+
+    public String getServerSerialize() {
+        return serverSerialize;
+    }
+
+    public void setServerSerialize(String serverSerialize) {
+        this.serverSerialize = serverSerialize;
     }
 }

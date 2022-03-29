@@ -19,7 +19,7 @@ public class PropertiesLoader {
 
     private static String DEFAULT_PROPERTIES_FILE = "D:\\rpc\\irpc-framework-core\\src\\main\\resources\\irpc.properties";
 
-    //todo 如果这里直接使用static修饰是否可以？
+
     public static void loadConfiguration() throws IOException {
         if(properties!=null){
             return;

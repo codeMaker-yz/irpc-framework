@@ -8,6 +8,10 @@ import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
+import idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory;
+import idea.irpc.framework.core.serialize.hessian.HessianSerializeFactory;
+import idea.irpc.framework.core.serialize.jdk.JdkSerializeFactory;
+import idea.irpc.framework.core.serialize.kryo.KryoSerializeFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -16,8 +20,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import static idea.irpc.framework.core.common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
 import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
 import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_URL_SET;
+import static idea.irpc.framework.core.common.constants.RpcConstants.*;
+import static idea.irpc.framework.core.common.constants.RpcConstants.KRYO_SERIALIZE_TYPE;
 
 
 public class Server {
@@ -80,6 +87,23 @@ public class Server {
     public void initServerConfig(){
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
+        String serverSerialize = serverConfig.getServerSerialize();
+        switch (serverSerialize){
+            case JDK_SERIALIZE_TYPE:
+                SERVER_SERIALIZE_FACTORY = new JdkSerializeFactory();
+                break;
+            case FAST_JSON_SERIALIZE_TYPE:
+                SERVER_SERIALIZE_FACTORY = new FastJsonSerializeFactory();
+                break;
+            case HESSIAN2_SERIALIZE_TYPE:
+                SERVER_SERIALIZE_FACTORY = new HessianSerializeFactory();
+                break;
+            case KRYO_SERIALIZE_TYPE:
+                SERVER_SERIALIZE_FACTORY = new KryoSerializeFactory();
+                break;
+            default:
+                throw new RuntimeException("no match serialize type for " + serverSerialize);
+        }
     }
 
     public void exportService(Object serviceBean){
