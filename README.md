@@ -210,8 +210,33 @@ public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
 }
 ```
 
+## 路由层接入
+
+
+
+
 ## 序列化
 
 传输过程中，数据需要以字节数组形式传输，常见的序列化技术有以下几类：Hessian、Kryo、JDK、FastJson。为了能兼容各类不同的序列化框架，在IRpc框架内部抽离了一层序列化层，专门用于对接市面上常见的序列化技术框架。
+项目对常见的几项序列化技术都进行了接入，可以通过配置文件中的类型来决定使用哪一类序列化技术。
+
+如何评估序列化技术的优劣？
+通常考虑这项技术在实际落地中的吞吐量，比较具有代表性的两个指标为：
+- 产生码流的大小
+- 序列化处理的速度
+
+通过码流大小的比对测试发现，码流大小比较为：kryo > fastJson > hessian >> jdk, JDK产生的码流远大于前三项技术产生的码流。
+
+基于JMH进行测试，比较相关序列化吞吐性,通过最终基准报告看，fastJson效果最佳，JDK最差。
+```java
+Benchmark                                    Mode  Cnt       Score        Error  Units
+SerializeCompareTest.fastJsonSerializeTest  thrpt    5  418817.217 ±  23916.074  ops/s
+SerializeCompareTest.hessianSerializeTest   thrpt    5  147008.575 ± 102135.128  ops/s
+SerializeCompareTest.jdkSerializeTest       thrpt    5   34299.448 ±   3138.283  ops/s
+SerializeCompareTest.kryoSerializeTest      thrpt    5  293025.368 ±  88426.848  ops/s
+```
+综上，考虑序列化技术时，可以优先考虑fastJson、kryo等技术。
+
+
 
 
