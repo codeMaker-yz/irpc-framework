@@ -1,6 +1,5 @@
 package idea.irpc.framework.core.client;
 
-import com.alibaba.fastjson.JSON;
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.RpcProtocol;
 import io.netty.channel.Channel;

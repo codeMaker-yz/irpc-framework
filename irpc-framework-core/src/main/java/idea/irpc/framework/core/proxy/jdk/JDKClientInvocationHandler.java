@@ -34,6 +34,7 @@ public class JDKClientInvocationHandler implements InvocationHandler {
         rpcInvocation.setTargetServiceName(rpcReferenceWrapper.getAimClass().getName());
         //注入一个uuid，对每一次请求做单独区分
         rpcInvocation.setUuid(UUID.randomUUID().toString());
+        rpcInvocation.setAttachments(rpcReferenceWrapper.getAttachments());
         RESP_MAP.put(rpcInvocation.getUuid(),OBJECT);
         SEND_QUEUE.add(rpcInvocation);
         long beginTime = System.currentTimeMillis();

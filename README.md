@@ -228,7 +228,7 @@ public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
 通过码流大小的比对测试发现，码流大小比较为：kryo > fastJson > hessian >> jdk, JDK产生的码流远大于前三项技术产生的码流。
 
 基于JMH进行测试，比较相关序列化吞吐性,通过最终基准报告看，fastJson效果最佳，JDK最差。
-```java
+```markdown
 Benchmark                                    Mode  Cnt       Score        Error  Units
 SerializeCompareTest.fastJsonSerializeTest  thrpt    5  418817.217 ±  23916.074  ops/s
 SerializeCompareTest.hessianSerializeTest   thrpt    5  147008.575 ± 102135.128  ops/s
