@@ -4,7 +4,11 @@ import idea.irpc.framework.core.common.RpcDecoder;
 import idea.irpc.framework.core.common.RpcEncoder;
 import idea.irpc.framework.core.common.config.PropertiesBootstrap;
 import idea.irpc.framework.core.common.config.ServerConfig;
+import idea.irpc.framework.core.common.event.IRpcListenerLoader;
 import idea.irpc.framework.core.common.utils.CommonUtils;
+import idea.irpc.framework.core.filter.Server.ServerFilterChain;
+import idea.irpc.framework.core.filter.Server.ServerLogFilterImpl;
+import idea.irpc.framework.core.filter.Server.ServerTokenFilterImpl;
 import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
@@ -20,9 +24,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import static idea.irpc.framework.core.common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
-import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
-import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_URL_SET;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
 import static idea.irpc.framework.core.common.constants.RpcConstants.*;
 import static idea.irpc.framework.core.common.constants.RpcConstants.KRYO_SERIALIZE_TYPE;
 
@@ -34,7 +36,8 @@ public class Server {
 
     private ServerConfig serverConfig;
 
-    private RegistryService registryService;
+    private static IRpcListenerLoader iRpcListenerLoader;
+
 
     public ServerConfig getServerConfig() {
         return serverConfig;
@@ -104,9 +107,14 @@ public class Server {
             default:
                 throw new RuntimeException("no match serialize type for " + serverSerialize);
         }
+        ServerFilterChain serverFilterChain = new ServerFilterChain();
+        serverFilterChain.addServerFilter(new ServerLogFilterImpl());
+        serverFilterChain.addServerFilter(new ServerTokenFilterImpl());
+        SERVER_FILTER_CHAIN = serverFilterChain;
     }
 
-    public void exportService(Object serviceBean){
+    public void exportService(ServiceWrapper serviceWrapper){
+        Object serviceBean = serviceWrapper.getServiceObj();
         if(serviceBean.getClass().getInterfaces().length == 0){
             throw new RuntimeException("service must had interfaces");
         }
@@ -114,8 +122,8 @@ public class Server {
         if(classes.length > 1){
             throw new RuntimeException("service must only had one interfaces");
         }
-        if(registryService == null){
-            registryService = new ZookeeperRegister(serverConfig.getRegisterAddr());
+        if(REGISTRY_SERVICE == null){
+            REGISTRY_SERVICE = new ZookeeperRegister(serverConfig.getRegisterAddr());
         }
         //默认选择该对象的第一个实现接口
         Class interfaceClass = classes[0];
@@ -125,6 +133,7 @@ public class Server {
         url.setApplicationName(serverConfig.getApplicationName());
         url.addParameter("host", CommonUtils.getIpAddress());
         url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
+        url.addParameter("group",String.valueOf(serviceWrapper.getGroup()));
         PROVIDER_URL_SET.add(url);
 
     }
@@ -137,7 +146,7 @@ public class Server {
                 e.printStackTrace();
             }
             for (URL url : PROVIDER_URL_SET) {
-                registryService.register(url);
+                REGISTRY_SERVICE.register(url);
             }
         });
         task.start();
@@ -147,7 +156,11 @@ public class Server {
     public static void main(String[] args) throws InterruptedException {
         Server server = new Server();
         server.initServerConfig();
-        server.exportService(new DataServiceImpl());
+        iRpcListenerLoader = new IRpcListenerLoader();
+        iRpcListenerLoader.init();
+        server.exportService(new ServiceWrapper(new DataServiceImpl()));
+        server.exportService(new ServiceWrapper(new UserServiceImpl()));
+        ApplicationShutdownHook.registryShutdownHook();
         server.startApplication();
     }
 }

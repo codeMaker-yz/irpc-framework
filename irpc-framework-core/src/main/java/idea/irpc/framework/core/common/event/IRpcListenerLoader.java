@@ -44,6 +44,27 @@ public class IRpcListenerLoader {
         return null;
     }
 
+    /**
+     * 同步事件处理，可能会阻塞
+     * @param iRpcEvent
+     */
+    public static void sendSyncEvent(IRpcEvent iRpcEvent){
+        System.out.println(iRpcListenerList);
+        if(CommonUtils.isEmptyList(iRpcListenerList)){
+            return;
+        }
+        for (IRpcListener<?> iRpcListener : iRpcListenerList){
+            Class<?> type = getInterfaceT(iRpcListener);
+            if(type.equals(iRpcEvent.getClass())){
+                try {
+                    iRpcListener.callBack(iRpcEvent.getData());
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     public static void sendEvent(IRpcEvent iRpcEvent) {
         if(CommonUtils.isEmptyList(iRpcListenerList)){
             return;

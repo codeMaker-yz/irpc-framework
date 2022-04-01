@@ -9,6 +9,10 @@ import idea.irpc.framework.core.common.config.ClientConfig;
 import idea.irpc.framework.core.common.config.PropertiesBootstrap;
 import idea.irpc.framework.core.common.event.IRpcListenerLoader;
 import idea.irpc.framework.core.common.utils.CommonUtils;
+import idea.irpc.framework.core.filter.Client.ClientFilterChain;
+import idea.irpc.framework.core.filter.Client.ClientLogFilterImpl;
+import idea.irpc.framework.core.filter.Client.DirectInvokeFilterImpl;
+import idea.irpc.framework.core.filter.Client.GroupFilterImpl;
 import idea.irpc.framework.core.proxy.jdk.JDKProxyFactory;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
@@ -202,6 +206,12 @@ public class Client {
             default:
                 throw new RuntimeException("no match serialize type for " + clientSerialize);
         }
+        //todo 初始化过滤链 指定过滤顺序
+        ClientFilterChain clientFilterChain = new ClientFilterChain();
+        clientFilterChain.addClientFilter(new DirectInvokeFilterImpl());
+        clientFilterChain.addClientFilter(new GroupFilterImpl());
+        clientFilterChain.addClientFilter(new ClientLogFilterImpl());
+        CLIENT_FILTER_CHAIN = clientFilterChain;
 
     }
 
@@ -209,7 +219,12 @@ public class Client {
         Client client = new Client();
         RpcReference rpcReference = client.initClientApplication();
         client.initClientConfig();
-        DataService dataService = rpcReference.get(DataService.class);
+        RpcReferenceWrapper<DataService> rpcReferenceWrapper = new RpcReferenceWrapper<>();
+        rpcReferenceWrapper.setAimClass(DataService.class);
+        rpcReferenceWrapper.setGroup("dev");
+        rpcReferenceWrapper.setServiceToken("token-a");
+        rpcReferenceWrapper.setUrl("localhost:9093");
+        DataService dataService = rpcReference.get(rpcReferenceWrapper);
         client.doSubscribeService(DataService.class);
         ConnectionHandler.setBootstrap(client.getBootstrap());
         client.doConnectServer();

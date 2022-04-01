@@ -1,6 +1,7 @@
 package idea.irpc.framework.core.proxy;
 
 
+import idea.irpc.framework.core.client.RpcReferenceWrapper;
 
 /**
  * @author ：Mr.Zhang
@@ -8,6 +9,6 @@ package idea.irpc.framework.core.proxy;
  */
 public interface ProxyFactory {
 
-    <T> T getProxy(final Class clazz) throws Throwable;
+    <T> T getProxy(RpcReferenceWrapper rpcReferenceWrapper) throws Throwable;
 
 }

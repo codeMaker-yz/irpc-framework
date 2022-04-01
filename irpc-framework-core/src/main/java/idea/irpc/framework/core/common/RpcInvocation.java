@@ -1,12 +1,17 @@
 package idea.irpc.framework.core.common;
 
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author ：Mr.Zhang
  * @date ：Created in 2022/3/3 19:00
  */
-public class RpcInvocation {
+public class RpcInvocation implements Serializable {
+
+    private static final long serialVersionUID = -3611379458492006176L;
     private String targetMethod;
 
     private String targetServiceName;
@@ -16,6 +21,8 @@ public class RpcInvocation {
     private String uuid;
 
     private Object response;
+
+    private Map<String,Object> attachments = new HashMap<>();
 
     public Object getResponse() {
         return response;
@@ -57,6 +64,13 @@ public class RpcInvocation {
         this.args = args;
     }
 
+    public Map<String, Object> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(Map<String, Object> attachments) {
+        this.attachments = attachments;
+    }
 
     @Override
     public String toString() {
