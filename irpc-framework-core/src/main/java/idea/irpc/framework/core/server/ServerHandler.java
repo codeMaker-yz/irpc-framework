@@ -10,8 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
 
-import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
-import static idea.irpc.framework.core.common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
 
 /**
  * @author ：Mr.Zhang
@@ -24,6 +23,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         RpcProtocol rpcProtocol = (RpcProtocol)msg;
         RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
         log.info("serverHandler............" + System.currentTimeMillis());
+        //执行过滤链路
+        SERVER_FILTER_CHAIN.doFilter(rpcInvocation);
         //PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
         Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
 

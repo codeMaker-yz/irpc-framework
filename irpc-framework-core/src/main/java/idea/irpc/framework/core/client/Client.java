@@ -97,6 +97,7 @@ public class Client {
         iRpcListenerLoader = new IRpcListenerLoader();
         iRpcListenerLoader.init();
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
+        CLIENT_CONFIG = this.clientConfig;
         RpcReference rpcReference = new RpcReference(new JDKProxyFactory());
         return rpcReference;
     }

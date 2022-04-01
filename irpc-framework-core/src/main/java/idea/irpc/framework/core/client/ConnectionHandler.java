@@ -125,7 +125,7 @@ public class ConnectionHandler {
         if (channelFutureWrappers == null || channelFutureWrappers.length == 0) {
             throw new RuntimeException("no provider exist for " + providerServiceName);
         }
-//        CLIENT_FILTER_CHAIN.doFilter(Arrays.asList(channelFutureWrappers), rpcInvocation);
+        CLIENT_FILTER_CHAIN.doFilter(Arrays.asList(channelFutureWrappers), rpcInvocation);
         Selector selector = new Selector();
         selector.setProviderServiceName(providerServiceName);
         selector.setChannelFutureWrappers(channelFutureWrappers);
