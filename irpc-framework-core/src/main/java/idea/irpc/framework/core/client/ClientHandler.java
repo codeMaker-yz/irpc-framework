@@ -9,6 +9,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import static idea.irpc.framework.core.common.cache.CommonClientCache.CLIENT_SERIALIZE_FACTORY;
 import static idea.irpc.framework.core.common.cache.CommonClientCache.RESP_MAP;
 
 /**
@@ -22,8 +23,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
         log.info("clientHandler..........");
         RpcProtocol rpcProtocol = (RpcProtocol) msg;
         byte[] reqContent = rpcProtocol.getContent();
-        String json = new String(reqContent,0,reqContent.length);
-        RpcInvocation rpcInvocation = JSON.parseObject(json, RpcInvocation.class);
+        RpcInvocation rpcInvocation = CLIENT_SERIALIZE_FACTORY.deserialize(reqContent, RpcInvocation.class);
         //System.out.println(rpcInvocation.getResponse() + "..........." + System.currentTimeMillis());
         //通过之前发送的uuid来注入匹配的响应数值
         if(!RESP_MAP.containsKey(rpcInvocation.getUuid())){

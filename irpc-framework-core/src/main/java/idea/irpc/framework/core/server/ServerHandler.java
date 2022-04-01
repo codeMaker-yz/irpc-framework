@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Method;
 
 import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
 
 /**
  * @author ：Mr.Zhang
@@ -21,8 +22,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         RpcProtocol rpcProtocol = (RpcProtocol)msg;
-        String json = new String(rpcProtocol.getContent(),0,rpcProtocol.getContentLength());
-        RpcInvocation rpcInvocation = JSON.parseObject(json, RpcInvocation.class);
+        RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
 
         log.info("serverHandler............" + System.currentTimeMillis());
         //PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合

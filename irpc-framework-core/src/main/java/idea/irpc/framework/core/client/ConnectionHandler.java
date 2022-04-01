@@ -4,6 +4,8 @@ import idea.irpc.framework.core.common.ChannelFutureWrapper;
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.filter.Client.ClientFilterChain;
+import idea.irpc.framework.core.registy.URL;
+import idea.irpc.framework.core.registy.zookeeper.ProviderNodeInfo;
 import idea.irpc.framework.core.router.Selector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -56,18 +58,22 @@ public class ConnectionHandler {
         //到底这个channelFuture里面是什么
         ChannelFuture channelFuture = bootstrap.connect(ip, port).sync();
         String providerURLInfo = URL_MAP.get(providerServiceName).get(providerIp);
-        log.info("providerURLInfo: " + providerURLInfo);
+        ProviderNodeInfo providerNodeInfo = URL.buildURLFromUrlStr(providerURLInfo);
+        log.info("providerNodeInfo: " + providerNodeInfo);
+
         ChannelFutureWrapper channelFutureWrapper = new ChannelFutureWrapper();
         channelFutureWrapper.setChannelFuture(channelFuture);
         channelFutureWrapper.setHost(ip);
         channelFutureWrapper.setPort(port);
         channelFutureWrapper.setWeight(Integer.valueOf(providerURLInfo.substring(providerURLInfo.lastIndexOf(";")+1)));
+        channelFutureWrapper.setGroup(providerNodeInfo.getGroup());
         SERVER_ADDRESS.add(providerIp);
         List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(providerServiceName);
         if (CommonUtils.isEmptyList(channelFutureWrappers)) {
             channelFutureWrappers = new ArrayList<>();
         }
         channelFutureWrappers.add(channelFutureWrapper);
+        //例如com.test.UserService会被放入到一个Map集合中,key是服务的名字，value对应的channel通道的List集合
         CONNECT_MAP.put(providerServiceName, channelFutureWrappers);
         Selector selector = new Selector();
         selector.setProviderServiceName(providerServiceName);
