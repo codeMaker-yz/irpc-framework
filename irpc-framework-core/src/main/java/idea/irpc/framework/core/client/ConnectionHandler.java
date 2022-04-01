@@ -1,13 +1,16 @@
 package idea.irpc.framework.core.client;
 
 import idea.irpc.framework.core.common.ChannelFutureWrapper;
+import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.utils.CommonUtils;
+import idea.irpc.framework.core.filter.Client.ClientFilterChain;
 import idea.irpc.framework.core.router.Selector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -15,6 +18,7 @@ import java.util.List;
 import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
 
 /**
+ * 当注册中心的节点新增或者移除或者权重变化的时候，这个类主要负责对内存中的url做变更
  * @author ：Mr.Zhang
  * @date ：Created in 2022/3/12 15:28
  */
@@ -106,16 +110,19 @@ public class ConnectionHandler {
     /**
      * 默认走随机策略获取ChannelFuture
      *
-     * @param providerServiceName
+     * @param rpcInvocation
      * @return
      */
-    public static ChannelFuture getChannelFuture(String providerServiceName) {
-        List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(providerServiceName);
-        if (CommonUtils.isEmptyList(channelFutureWrappers)) {
+    public static ChannelFuture getChannelFuture(RpcInvocation rpcInvocation) {
+        String providerServiceName = rpcInvocation.getTargetServiceName();
+        ChannelFutureWrapper[] channelFutureWrappers = SERVICE_ROUTER_MAP.get(providerServiceName);
+        if (channelFutureWrappers == null || channelFutureWrappers.length == 0) {
             throw new RuntimeException("no provider exist for " + providerServiceName);
         }
+        CLIENT_FILTER_CHAIN.doFilter(Arrays.asList(channelFutureWrappers), rpcInvocation);
         Selector selector = new Selector();
         selector.setProviderServiceName(providerServiceName);
+        selector.setChannelFutureWrappers(channelFutureWrappers);
         ChannelFuture channelFuture = IROUTER.select(selector).getChannelFuture();
         return channelFuture;
     }

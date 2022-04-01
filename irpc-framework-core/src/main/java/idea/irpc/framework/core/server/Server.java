@@ -134,7 +134,11 @@ public class Server {
         url.addParameter("host", CommonUtils.getIpAddress());
         url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
         url.addParameter("group",String.valueOf(serviceWrapper.getGroup()));
+        url.addParameter("limit",String.valueOf(serviceWrapper.getLimit()));
         PROVIDER_URL_SET.add(url);
+        if(CommonUtils.isNotEmpty(serviceWrapper.getServiceToken())){
+            PROVIDER_SERVICE_WRAPPER_MAP.put(interfaceClass.getName(), serviceWrapper);
+        }
 
     }
 
@@ -158,8 +162,14 @@ public class Server {
         server.initServerConfig();
         iRpcListenerLoader = new IRpcListenerLoader();
         iRpcListenerLoader.init();
-        server.exportService(new ServiceWrapper(new DataServiceImpl()));
-        server.exportService(new ServiceWrapper(new UserServiceImpl()));
+        ServiceWrapper dataServiceWrapper = new ServiceWrapper(new DataServiceImpl(), "dev");
+        dataServiceWrapper.setServiceToken("token-a");
+        dataServiceWrapper.setLimit(2);
+        ServiceWrapper userServiceWrapper = new ServiceWrapper(new UserServiceImpl(), "dev");
+        userServiceWrapper.setServiceToken("token-b");
+        userServiceWrapper.setLimit(2);
+        server.exportService(dataServiceWrapper);
+        server.exportService(userServiceWrapper);
         ApplicationShutdownHook.registryShutdownHook();
         server.startApplication();
     }
