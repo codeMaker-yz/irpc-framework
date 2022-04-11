@@ -1,6 +1,10 @@
 # irpc-framework
 轻量级的rpc框架
 
+
+![image](https://github.com/codeMaker-yz/irpc-framework/blob/master/images/%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
+
+
 客户端和服务器端的通信流程分析：
 
 1. 客户端与服务器端连接建立后，执行客户端和服务器的initChannel(SocketChannel ch)方法
