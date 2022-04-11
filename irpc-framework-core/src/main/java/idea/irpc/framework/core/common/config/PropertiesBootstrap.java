@@ -11,6 +11,7 @@ public class PropertiesBootstrap {
 
     public static final String SERVER_PORT = "irpc.serverPort";
     public static final String REGISTER_ADDRESS = "irpc.registerAddr";
+    public static final String REGISTER_TYPE = "irpc.registerType";
     public static final String APPLICATION_NAME = "irpc.applicationName";
     public static final String PROXY_TYPE = "irpc.proxyType";
     public static final String ROUTER_STRATEGY = "irpc.routerStrategy";
@@ -39,6 +40,7 @@ public class PropertiesBootstrap {
         }
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
+        clientConfig.setRegisterType(PropertiesLoader.getPropertiesNotBlank(REGISTER_TYPE));
         clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
         clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(ROUTER_STRATEGY));

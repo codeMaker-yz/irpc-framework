@@ -14,9 +14,9 @@ import idea.irpc.framework.core.filter.Client.ClientLogFilterImpl;
 import idea.irpc.framework.core.filter.Client.DirectInvokeFilterImpl;
 import idea.irpc.framework.core.filter.Client.GroupFilterImpl;
 import idea.irpc.framework.core.proxy.jdk.JDKProxyFactory;
+import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
-import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import idea.irpc.framework.core.router.RandomRouterImpl;
 import idea.irpc.framework.core.router.RotateRouterImpl;
 import idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory;
@@ -42,6 +42,7 @@ import java.util.Map;
 
 import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
 import static idea.irpc.framework.core.common.constants.RpcConstants.*;
+import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 
 /**
  * @author ：Mr.Zhang
@@ -56,8 +57,6 @@ public class Client {
     public static EventLoopGroup clientGroup = new NioEventLoopGroup();
 
     private ClientConfig clientConfig;
-
-    private AbstractRegister abstractRegister;
 
     private IRpcListenerLoader iRpcListenerLoader;
 
@@ -107,16 +106,23 @@ public class Client {
      * @param serviceBean
      */
     public void doSubscribeService(Class serviceBean){
-        if(abstractRegister == null){
-            abstractRegister = new ZookeeperRegister(clientConfig.getRegisterAddr());
+        if(ABSTRACT_REGISTER == null){
+            try {
+                EXTENSION_LOADER.loadExtension(RegistryService.class);
+                Map<String,Class> registerMap = EXTENSION_LOADER_CLASS_CACHE.get(RegistryService.class.getName());
+                Class registerClass =  registerMap.get(clientConfig.getRegisterType());
+                ABSTRACT_REGISTER = (AbstractRegister) registerClass.newInstance();
+            } catch (Exception e){
+                throw new RuntimeException("registryServiceType unKnow,error is ", e);
+            }
         }
         URL url = new URL();
         url.setApplicationName(clientConfig.getApplicationName());
         url.setServiceName(serviceBean.getName());
         url.addParameter("host", CommonUtils.getIpAddress());
-        Map<String, String> result = abstractRegister.getServiceWeightMap(serviceBean.getName());
+        Map<String, String> result = ABSTRACT_REGISTER.getServiceWeightMap(serviceBean.getName());
         URL_MAP.put(serviceBean.getName(),result);
-        abstractRegister.subscribe(url);
+        ABSTRACT_REGISTER.subscribe(url);
     }
 
     /**
@@ -124,7 +130,7 @@ public class Client {
      */
     public void doConnectServer() {
         for (URL providerURL : SUBSCRIBE_SERVICE_LIST) {
-            List<String> providerIps = abstractRegister.getProviderIps(providerURL.getServiceName());
+            List<String> providerIps = ABSTRACT_REGISTER.getProviderIps(providerURL.getServiceName());
             for (String providerIp : providerIps) {
                 try {
                     ConnectionHandler.connect(providerURL.getServiceName(), providerIp);
@@ -136,7 +142,7 @@ public class Client {
             url.addParameter("servicePath", providerURL.getServiceName()+"/provider");
             url.addParameter("providerIps", JSON.toJSONString(providerIps));
             //客户端在此新增一个订阅的功能
-            abstractRegister.doAfterSubscribe(url);
+            ABSTRACT_REGISTER.doAfterSubscribe(url);
         }
     }
 

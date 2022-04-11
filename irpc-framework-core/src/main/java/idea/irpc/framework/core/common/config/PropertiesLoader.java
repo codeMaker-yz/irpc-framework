@@ -69,4 +69,18 @@ public class PropertiesLoader {
         }
         return Integer.valueOf(propertiesMap.get(key));
     }
+
+    public static String getPropertiesNotBlank(String key) {
+        String val = getPropertiesStr(key);
+        if (val == null || val.equals("")) {
+            throw new IllegalArgumentException(key + " ≈‰÷√Œ™ø’“Ï≥£");
+        }
+        return val;
+    }
+
+    public static String getPropertiesStrDefault(String key, String defaultVal) {
+        String val = getPropertiesStr(key);
+        return val == null || val.equals("") ? defaultVal : val;
+    }
+
 }

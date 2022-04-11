@@ -123,7 +123,7 @@ public class Server {
             throw new RuntimeException("service must only had one interfaces");
         }
         if(REGISTRY_SERVICE == null){
-            REGISTRY_SERVICE = new ZookeeperRegister(serverConfig.getRegisterAddr());
+            REGISTRY_SERVICE = new ZookeeperRegister();
         }
         //默认选择该对象的第一个实现接口
         Class interfaceClass = classes[0];

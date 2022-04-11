@@ -9,6 +9,8 @@ public class ClientConfig {
 
     private String registerAddr;
 
+    private String registerType;
+
     /**
      * 代理类型
      */
@@ -62,5 +64,13 @@ public class ClientConfig {
 
     public void setClientSerialize(String clientSerialize) {
         this.clientSerialize = clientSerialize;
+    }
+
+    public String getRegisterType() {
+        return registerType;
+    }
+
+    public void setRegisterType(String registerType) {
+        this.registerType = registerType;
     }
 }

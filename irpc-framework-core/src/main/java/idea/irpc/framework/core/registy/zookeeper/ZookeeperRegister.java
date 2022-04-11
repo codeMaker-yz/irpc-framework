@@ -17,6 +17,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static idea.irpc.framework.core.common.cache.CommonClientCache.CLIENT_CONFIG;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.SERVER_CONFIG;
+
 /**
  * @author £ºMr.Zhang
  * @date £ºCreated in 2022/3/12 14:40
@@ -26,6 +29,14 @@ public class ZookeeperRegister extends AbstractRegister implements RegistryServi
 
     private String ROOT = "/irpc";
 
+    public AbstractZookeeperClient getZkClient() {
+        return zkClient;
+    }
+
+    public void setZkClient(AbstractZookeeperClient zkClient) {
+        this.zkClient = zkClient;
+    }
+
     private String getProviderPath(URL url){
         return ROOT + "/" + url.getServiceName()+ "/provider/" + url.getParameters().get("host") + ":" + url.getParameters().get("port");
     }
@@ -34,9 +45,11 @@ public class ZookeeperRegister extends AbstractRegister implements RegistryServi
         return ROOT + "/" + url.getServiceName()+ "/consumer/" + url.getApplicationName() + ":" + url.getParameters().get("host")+":";
     }
 
-    public ZookeeperRegister(String address){
-        this.zkClient = new CuratorZookeeperClient(address);
+    public ZookeeperRegister(){
+        String registryAddr = CLIENT_CONFIG != null ? CLIENT_CONFIG.getRegisterAddr():SERVER_CONFIG.getRegisterAddr();
+        this.zkClient = new CuratorZookeeperClient(registryAddr);
     }
+
 
     @Override
     public List<String> getProviderIps(String serviceName) {
