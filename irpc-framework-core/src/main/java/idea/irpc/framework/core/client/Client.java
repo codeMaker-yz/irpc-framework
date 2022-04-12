@@ -1,6 +1,5 @@
 package idea.irpc.framework.core.client;
 
-
 import idea.irpc.framework.core.common.RpcDecoder;
 import idea.irpc.framework.core.common.RpcEncoder;
 import idea.irpc.framework.core.common.RpcInvocation;
@@ -9,20 +8,14 @@ import idea.irpc.framework.core.common.config.ClientConfig;
 import idea.irpc.framework.core.common.config.PropertiesBootstrap;
 import idea.irpc.framework.core.common.event.IRpcListenerLoader;
 import idea.irpc.framework.core.common.utils.CommonUtils;
-import idea.irpc.framework.core.filter.Client.ClientFilterChain;
-import idea.irpc.framework.core.filter.Client.ClientLogFilterImpl;
-import idea.irpc.framework.core.filter.Client.DirectInvokeFilterImpl;
-import idea.irpc.framework.core.filter.Client.GroupFilterImpl;
-import idea.irpc.framework.core.proxy.jdk.JDKProxyFactory;
+import idea.irpc.framework.core.filter.client.ClientFilterChain;
+import idea.irpc.framework.core.filter.IClientFilter;
+import idea.irpc.framework.core.proxy.ProxyFactory;
 import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
-import idea.irpc.framework.core.router.RandomRouterImpl;
-import idea.irpc.framework.core.router.RotateRouterImpl;
-import idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory;
-import idea.irpc.framework.core.serialize.hessian.HessianSerializeFactory;
-import idea.irpc.framework.core.serialize.jdk.JdkSerializeFactory;
-import idea.irpc.framework.core.serialize.kryo.KryoSerializeFactory;
+import idea.irpc.framework.core.router.IRouter;
+import idea.irpc.framework.core.serialize.SerializeFactory;
 import idea.irpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -30,18 +23,17 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import com.alibaba.fastjson.JSON;
-
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
-import static idea.irpc.framework.core.common.constants.RpcConstants.*;
 import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 
 /**
@@ -74,7 +66,7 @@ public class Client {
         this.clientConfig = clientConfig;
     }
 
-    public RpcReference initClientApplication(){
+    public RpcReference initClientApplication() throws ClassNotFoundException, InstantiationException, IllegalAccessException, IOException {
         EventLoopGroup clientGroup = new NioEventLoopGroup();
 
         bootstrap.group(clientGroup);
@@ -97,8 +89,14 @@ public class Client {
         iRpcListenerLoader.init();
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
         CLIENT_CONFIG = this.clientConfig;
-        RpcReference rpcReference = new RpcReference(new JDKProxyFactory());
-        return rpcReference;
+        //spi扩展的加载部分
+        this.initClientConfig();
+        EXTENSION_LOADER.loadExtension(ProxyFactory.class);
+        String proxyType = clientConfig.getProxyType();
+        LinkedHashMap<String, Class> classMap = EXTENSION_LOADER_CLASS_CACHE.get(ProxyFactory.class.getName());
+        Class proxyClassType = classMap.get(proxyType);
+        ProxyFactory proxyFactory = (ProxyFactory)proxyClassType.newInstance();
+        return new RpcReference(proxyFactory);
     }
 
     /**
@@ -181,44 +179,40 @@ public class Client {
 
 
     /**
-     * todo
-     * 后续可以考虑加入spi
+     * 使用spi机制，更新代码
      */
-    private void initClientConfig() {
+    private void initClientConfig() throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         //初始化路由策略
+        EXTENSION_LOADER.loadExtension(IRouter.class);
         String routerStrategy = clientConfig.getRouterStrategy();
-        switch (routerStrategy){
-            case RANDOM_ROUTER_TYPE:
-                IROUTER = new RandomRouterImpl();
-                break;
-            case ROTATE_ROUTER_TYPE:
-                IROUTER = new RotateRouterImpl();
-                break;
-            default:
-                throw new RuntimeException("no match routeStrategy for " + routerStrategy);
+        LinkedHashMap<String, Class> iRouterMap = EXTENSION_LOADER_CLASS_CACHE.get(IRouter.class.getName());
+        Class iRouterClass = iRouterMap.get(routerStrategy);
+        if(iRouterClass == null){
+            throw new RuntimeException("no match routerStrategy for " + routerStrategy);
         }
+        IROUTER = (IRouter)iRouterClass.newInstance();
+
+        //初始化序列化框架
+        EXTENSION_LOADER.loadExtension(SerializeFactory.class);
         String clientSerialize = clientConfig.getClientSerialize();
-        switch (clientSerialize){
-            case JDK_SERIALIZE_TYPE:
-                CLIENT_SERIALIZE_FACTORY = new JdkSerializeFactory();
-                break;
-            case FAST_JSON_SERIALIZE_TYPE:
-                CLIENT_SERIALIZE_FACTORY = new FastJsonSerializeFactory();
-                break;
-            case HESSIAN2_SERIALIZE_TYPE:
-                CLIENT_SERIALIZE_FACTORY = new HessianSerializeFactory();
-                break;
-            case KRYO_SERIALIZE_TYPE:
-                CLIENT_SERIALIZE_FACTORY = new KryoSerializeFactory();
-                break;
-            default:
-                throw new RuntimeException("no match serialize type for " + clientSerialize);
+        LinkedHashMap<String, Class> serializeMap = EXTENSION_LOADER_CLASS_CACHE.get(SerializeFactory.class.getName());
+        Class clientSerializeClass = serializeMap.get(clientSerialize);
+        if(clientSerializeClass == null){
+            throw new RuntimeException("no match serialize type for " + clientSerialize);
         }
-        //todo 初始化过滤链 指定过滤顺序
+        CLIENT_SERIALIZE_FACTORY = (SerializeFactory)clientSerializeClass.newInstance();
+
+        //初始化客户端过滤链路
+        EXTENSION_LOADER.loadExtension(IClientFilter.class);
         ClientFilterChain clientFilterChain = new ClientFilterChain();
-        clientFilterChain.addClientFilter(new DirectInvokeFilterImpl());
-        clientFilterChain.addClientFilter(new GroupFilterImpl());
-        clientFilterChain.addClientFilter(new ClientLogFilterImpl());
+        LinkedHashMap<String, Class> iClientMap = EXTENSION_LOADER_CLASS_CACHE.get(IClientFilter.class.getName());
+        for(String implClassName : iClientMap.keySet()){
+            Class iClientFilterClass = iClientMap.get(implClassName);
+            if(iClientFilterClass == null){
+                throw new RuntimeException("no match iClientFilter for " + iClientFilterClass);
+            }
+            clientFilterChain.addClientFilter((IClientFilter) iClientFilterClass.newInstance());
+        }
         CLIENT_FILTER_CHAIN = clientFilterChain;
 
     }
@@ -226,7 +220,6 @@ public class Client {
     public static void main(String[] args) throws Throwable {
         Client client = new Client();
         RpcReference rpcReference = client.initClientApplication();
-        client.initClientConfig();
         RpcReferenceWrapper<DataService> rpcReferenceWrapper = new RpcReferenceWrapper<>();
         rpcReferenceWrapper.setAimClass(DataService.class);
         rpcReferenceWrapper.setGroup("dev");

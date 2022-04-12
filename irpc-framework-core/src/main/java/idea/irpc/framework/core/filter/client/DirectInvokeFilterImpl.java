@@ -1,4 +1,4 @@
-package idea.irpc.framework.core.filter.Client;
+package idea.irpc.framework.core.filter.client;
 
 import idea.irpc.framework.core.common.ChannelFutureWrapper;
 import idea.irpc.framework.core.common.RpcInvocation;

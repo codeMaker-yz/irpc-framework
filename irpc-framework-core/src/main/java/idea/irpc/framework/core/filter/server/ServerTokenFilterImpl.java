@@ -1,4 +1,4 @@
-package idea.irpc.framework.core.filter.Server;
+package idea.irpc.framework.core.filter.server;
 
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.utils.CommonUtils;

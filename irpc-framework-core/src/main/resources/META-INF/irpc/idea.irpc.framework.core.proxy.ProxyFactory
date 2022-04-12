@@ -1,0 +1,2 @@
+jdk=idea.irpc.framework.core.proxy.jdk.JDKProxyFactory
+#javassist=idea.irpc.framework.core.proxy.javassist.JavassistProxyFactory

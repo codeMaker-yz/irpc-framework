@@ -1,0 +1,4 @@
+kryo=idea.irpc.framework.core.serialize.kryo.KryoSerializeFactory
+jdk=idea.irpc.framework.core.serialize.jdk.JdkSerializeFactory
+hessian=idea.irpc.framework.core.serialize.hessian.HessianSerializeFactory
+fastJson=idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory

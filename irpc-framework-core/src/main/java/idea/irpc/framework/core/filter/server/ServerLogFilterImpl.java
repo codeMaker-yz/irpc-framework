@@ -1,12 +1,9 @@
-package idea.irpc.framework.core.filter.Server;
+package idea.irpc.framework.core.filter.server;
 
 import idea.irpc.framework.core.common.RpcInvocation;
-import idea.irpc.framework.core.filter.Client.ClientLogFilterImpl;
 import idea.irpc.framework.core.filter.IServerFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static idea.irpc.framework.core.common.cache.CommonClientCache.CLIENT_CONFIG;
 
 /**
  * 服务端日志过滤器
