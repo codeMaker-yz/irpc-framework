@@ -78,7 +78,7 @@ public class Client {
                 //连接建立后，被调用
                 new ChannelInitializer<SocketChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(SocketChannel ch){
                         log.info("client Init provider........." + System.currentTimeMillis());
                         ch.pipeline().addLast(new RpcEncoder());
                         ch.pipeline().addLast(new RpcDecoder());
@@ -224,6 +224,8 @@ public class Client {
         rpcReferenceWrapper.setAimClass(DataService.class);
         rpcReferenceWrapper.setGroup("dev");
         rpcReferenceWrapper.setServiceToken("token-a");
+        rpcReferenceWrapper.setAsync(true);
+        rpcReferenceWrapper.setTimeOut(1000);
 //        rpcReferenceWrapper.setUrl("localhost:9093");
         DataService dataService = rpcReference.get(rpcReferenceWrapper);
         client.doSubscribeService(DataService.class);
