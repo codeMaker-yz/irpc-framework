@@ -2,8 +2,7 @@ package idea.irpc.framework.core.common.config;
 
 import java.io.IOException;
 
-import static idea.irpc.framework.core.common.constants.RpcConstants.JDK_SERIALIZE_TYPE;
-import static idea.irpc.framework.core.common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
+import static idea.irpc.framework.core.common.constants.RpcConstants.*;
 
 /**
  * @author £ºMr.Zhang
@@ -20,6 +19,8 @@ public class PropertiesBootstrap {
     public static final String ROUTER_TYPE = "irpc.router";
     public static final String SERVER_SERIALIZE_TYPE = "irpc.serverSerialize";
     public static final String CLIENT_SERIALIZE_TYPE = "irpc.clientSerialize";
+    public static final String SERVER_BIZ_THREAD_NUMS = "irpc.server.biz.thread.nums";
+    public static final String SERVER_QUEUE_SIZE = "irpc.server.queue.size";
 
     public static ServerConfig loadServerConfigFromLocal() {
         try {
@@ -33,6 +34,8 @@ public class PropertiesBootstrap {
         serverConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         serverConfig.setRegisterType(PropertiesLoader.getPropertiesStr(REGISTER_TYPE));
         serverConfig.setServerSerialize(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE,JDK_SERIALIZE_TYPE));
+        serverConfig.setServerBizThreadNums(PropertiesLoader.getPropertiesIntegerDefault(SERVER_BIZ_THREAD_NUMS,DEFAULT_THREAD_NUMS));
+        serverConfig.setServerQueueSize(PropertiesLoader.getPropertiesIntegerDefault(SERVER_QUEUE_SIZE,DEFAULT_QUEUE_SIZE));
         return serverConfig;
     }
 

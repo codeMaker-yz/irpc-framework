@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.RpcProtocol;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
@@ -17,41 +18,22 @@ import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
  * @date ：Created in 2022/3/3 18:58
  */
 @Slf4j
+@ChannelHandler.Sharable
 public class ServerHandler extends ChannelInboundHandlerAdapter {
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        RpcProtocol rpcProtocol = (RpcProtocol)msg;
-        RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
-        log.info("serverHandler............" + System.currentTimeMillis());
-        //执行过滤链路
-        SERVER_FILTER_CHAIN.doFilter(rpcInvocation);
-        //PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
-        Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
-
-        Method[] methods = aimObject.getClass().getDeclaredMethods();
-        Object result = null;
-
-        for(Method method : methods){
-            if(method.getName().equals(rpcInvocation.getTargetMethod())){
-                // 通过反射找到目标对象，然后执行目标方法并返回对应值
-                if(method.getReturnType().equals(Void.TYPE)){
-                    method.invoke(aimObject, rpcInvocation.getArgs());
-                } else {
-                    result = method.invoke(aimObject, rpcInvocation.getArgs());
-                }
-                break;
-            }
-        }
-        rpcInvocation.setResponse(result);
-        RpcProtocol respRpcProtocol = new RpcProtocol(SERVER_SERIALIZE_FACTORY.serialize(rpcInvocation));
-        ctx.writeAndFlush(respRpcProtocol);
+    public void channelRead(ChannelHandlerContext ctx, Object msg){
+        ServerChannelReadData serverChannelReadData = new ServerChannelReadData();
+        serverChannelReadData.setRpcProtocol((RpcProtocol) msg);
+        serverChannelReadData.setChannelHandlerContext(ctx);
+        //放入channel分发器
+        SERVER_CHANNEL_DISPATCHER.add(serverChannelReadData);
 
     }
 
 
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause){
         cause.printStackTrace();
         Channel channel = ctx.channel();
         if(channel.isActive()){

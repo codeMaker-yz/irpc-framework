@@ -8,19 +8,10 @@ import idea.irpc.framework.core.common.event.IRpcListenerLoader;
 import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.filter.IServerFilter;
 import idea.irpc.framework.core.filter.server.ServerFilterChain;
-import idea.irpc.framework.core.filter.server.ServerLogFilterImpl;
-import idea.irpc.framework.core.filter.server.ServerTokenFilterImpl;
-
 import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
-import idea.irpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import idea.irpc.framework.core.serialize.SerializeFactory;
-import idea.irpc.framework.core.serialize.fastjson.FastJsonSerializeFactory;
-import idea.irpc.framework.core.serialize.hessian.HessianSerializeFactory;
-import idea.irpc.framework.core.serialize.jdk.JdkSerializeFactory;
-import idea.irpc.framework.core.serialize.kryo.KryoSerializeFactory;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -33,10 +24,10 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
-import static idea.irpc.framework.core.common.constants.RpcConstants.*;
-import static idea.irpc.framework.core.common.constants.RpcConstants.KRYO_SERIALIZE_TYPE;
+import static idea.irpc.framework.core.common.cache.CommonClientCache.EXTENSION_LOADER;
 import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
+import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
+
 
 
 public class Server {
@@ -93,15 +84,17 @@ public class Server {
                 });
         //5.绑定监听端口
         this.batchExportUrl();
+        SERVER_CHANNEL_DISPATCHER.startDataConsume();
         bootstrap.bind(serverConfig.getServerPort()).sync();
-
+        IS_STARTED = true;
     }
 
     public void initServerConfig() throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
         SERVER_CONFIG = serverConfig;
-
+        //初始化线程池和队列的配置
+        SERVER_CHANNEL_DISPATCHER.init(SERVER_CONFIG.getServerQueueSize(),SERVER_CONFIG.getServerBizThreadNums());
         //序列化技术初始化
         String serverSerialize = serverConfig.getServerSerialize();
         EXTENSION_LOADER.loadExtension(SerializeFactory.class);
