@@ -1,0 +1,4 @@
+idea\irpc\framework\spring\starter\config\IRpcServerAutoConfiguration.class
+idea\irpc\framework\spring\starter\common\IRpcReference.class
+idea\irpc\framework\spring\starter\config\IRpcClientAutoConfiguration.class
+idea\irpc\framework\spring\starter\common\IRpcService.class
