@@ -242,5 +242,7 @@ SerializeCompareTest.kryoSerializeTest      thrpt    5  293025.368 ±  88426.848
 综上，考虑序列化技术时，可以优先考虑fastJson、kryo等技术。
 
 
+## SPI机制扩展
 
+SPI机制破坏了双亲委派模型，Java设计团队引入了一个设计：线程上下文类加载器。这个类加载器可以通过Java.lang.Thread类的setContextClassLoader()方法进行设置，如果创建线程时还未设置，它将会从父线程中继承一个，如果在应用程序的全局范围内都没有设置过的话，那这个类加载器默认就是应用程序类加载器。
 
