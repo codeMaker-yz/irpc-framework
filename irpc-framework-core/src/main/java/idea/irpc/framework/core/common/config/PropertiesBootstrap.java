@@ -21,6 +21,9 @@ public class PropertiesBootstrap {
     public static final String CLIENT_SERIALIZE_TYPE = "irpc.clientSerialize";
     public static final String SERVER_BIZ_THREAD_NUMS = "irpc.server.biz.thread.nums";
     public static final String SERVER_QUEUE_SIZE = "irpc.server.queue.size";
+    public static final String SERVER_MAX_DATA_SIZE = "irpc.server.max.data.size";
+    public static final String CLIENT_MAX_DATA_SIZE = "irpc.client.max.data.size";
+    public static final String SERVER_MAX_CONNECTION = "irpc.server.max.connection";
 
     public static ServerConfig loadServerConfigFromLocal() {
         try {
@@ -36,6 +39,8 @@ public class PropertiesBootstrap {
         serverConfig.setServerSerialize(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE,JDK_SERIALIZE_TYPE));
         serverConfig.setServerBizThreadNums(PropertiesLoader.getPropertiesIntegerDefault(SERVER_BIZ_THREAD_NUMS,DEFAULT_THREAD_NUMS));
         serverConfig.setServerQueueSize(PropertiesLoader.getPropertiesIntegerDefault(SERVER_QUEUE_SIZE,DEFAULT_QUEUE_SIZE));
+        serverConfig.setMaxConnections(PropertiesLoader.getPropertiesIntegerDefault(SERVER_MAX_CONNECTION,DEFAULT_CONNECTION_NUMS));
+        serverConfig.setMaxServerRequestData(PropertiesLoader.getPropertiesIntegerDefault(SERVER_MAX_DATA_SIZE,SERVER_DEFAULT_MSG_LENGTH));
         return serverConfig;
     }
 
@@ -46,12 +51,13 @@ public class PropertiesBootstrap {
             throw new RuntimeException("loadClientConfigFromLocal fail,e is {}", e);
         }
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
+        clientConfig.setApplicationName(PropertiesLoader.getPropertiesNotBlank(APPLICATION_NAME));
         clientConfig.setRegisterType(PropertiesLoader.getPropertiesNotBlank(REGISTER_TYPE));
-        clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
+        clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesNotBlank(REGISTER_ADDRESS));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
         clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStrDefault(ROUTER_TYPE,RANDOM_ROUTER_TYPE));
         clientConfig.setClientSerialize(PropertiesLoader.getPropertiesStr(CLIENT_SERIALIZE_TYPE));
+        clientConfig.setMaxServerRespDataSize(PropertiesLoader.getPropertiesIntegerDefault(CLIENT_MAX_DATA_SIZE,CLIENT_DEFAULT_MSG_LENGTH));
         return clientConfig;
     }
 }

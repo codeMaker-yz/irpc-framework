@@ -19,11 +19,19 @@ import static idea.irpc.framework.core.common.cache.CommonClientCache.RESP_MAP;
 public class ClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        log.info("clientHandler..........");
+        //log.info("clientHandler..........");
         RpcProtocol rpcProtocol = (RpcProtocol) msg;
         byte[] reqContent = rpcProtocol.getContent();
         RpcInvocation rpcInvocation = CLIENT_SERIALIZE_FACTORY.deserialize(reqContent, RpcInvocation.class);
         //System.out.println(rpcInvocation.getResponse() + "..........." + System.currentTimeMillis());
+        if(rpcInvocation.getE() != null){
+            rpcInvocation.getE().printStackTrace();
+        }
+        Object r = rpcInvocation.getAttachments().get("async");
+        if(r != null && Boolean.valueOf(String.valueOf(r))){
+            ReferenceCountUtil.release(msg);
+            return;
+        }
         //通过之前发送的uuid来注入匹配的响应数值
         if(!RESP_MAP.containsKey(rpcInvocation.getUuid())){
             throw new IllegalArgumentException("server response is error!");

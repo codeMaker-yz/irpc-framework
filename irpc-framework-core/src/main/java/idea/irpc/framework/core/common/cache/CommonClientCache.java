@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date ：Created in 2022/3/5 10:49
  */
 public class CommonClientCache {
-    public static BlockingQueue<RpcInvocation> SEND_QUEUE = new ArrayBlockingQueue(100);
+    public static BlockingQueue<RpcInvocation> SEND_QUEUE = new ArrayBlockingQueue(5000);
     public static Map<String, Object> RESP_MAP = new ConcurrentHashMap<>();
     public static ClientConfig CLIENT_CONFIG;
     //provider名称 --> 该服务有哪些集群URL

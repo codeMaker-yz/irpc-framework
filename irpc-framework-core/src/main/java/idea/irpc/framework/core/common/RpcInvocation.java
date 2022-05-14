@@ -22,6 +22,9 @@ public class RpcInvocation implements Serializable {
 
     private Object response;
 
+    //记录服务端抛出的异常
+    private Throwable e;
+
     private Map<String,Object> attachments = new HashMap<>();
 
     public Object getResponse() {
@@ -70,6 +73,14 @@ public class RpcInvocation implements Serializable {
 
     public void setAttachments(Map<String, Object> attachments) {
         this.attachments = attachments;
+    }
+
+    public Throwable getE() {
+        return e;
+    }
+
+    public void setE(Throwable e) {
+        this.e = e;
     }
 
     @Override

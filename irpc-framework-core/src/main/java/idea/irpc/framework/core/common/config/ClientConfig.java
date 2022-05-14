@@ -26,6 +26,16 @@ public class ClientConfig {
      */
     private String clientSerialize;
 
+    private Integer maxServerRespDataSize;
+
+    public Integer getMaxServerRespDataSize() {
+        return maxServerRespDataSize;
+    }
+
+    public void setMaxServerRespDataSize(Integer maxServerRespDataSize) {
+        this.maxServerRespDataSize = maxServerRespDataSize;
+    }
+
     public String getProxyType() {
         return proxyType;
     }

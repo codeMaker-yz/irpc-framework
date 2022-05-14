@@ -2,6 +2,7 @@ import idea.irpc.framework.core.proxy.ProxyFactory;
 import idea.irpc.framework.core.proxy.jdk.JDKProxyFactory;
 import idea.irpc.framework.core.server.DataServiceImpl;
 import idea.irpc.framework.interfaces.DataService;
+import io.netty.util.internal.SystemPropertyUtil;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -14,8 +15,7 @@ import java.util.Map;
 public class ProxyTest {
     @Test
     public void test() throws Throwable {
-        System.out.println(-2 % 2);
-
+        System.out.println(SystemPropertyUtil.getInt("io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
 
     }
 

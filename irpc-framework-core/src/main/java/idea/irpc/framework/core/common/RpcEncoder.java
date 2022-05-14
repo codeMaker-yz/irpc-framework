@@ -5,6 +5,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
 
+import static idea.irpc.framework.core.common.constants.RpcConstants.DEFAULT_DECODE_CHAR;
+
 /**
  * @author ：Mr.Zhang
  * @date ：Created in 2022/3/3 19:07
@@ -14,9 +16,10 @@ public class RpcEncoder extends MessageToByteEncoder<RpcProtocol> {
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, RpcProtocol msg, ByteBuf byteBuf) throws Exception {
 
-        log.info("encoding..........");
+        //log.info("encoding..........");
         byteBuf.writeShort(msg.getMagicNumber());
         byteBuf.writeInt(msg.getContentLength());
         byteBuf.writeBytes(msg.getContent());
+        byteBuf.writeBytes(DEFAULT_DECODE_CHAR.getBytes());
     }
 }

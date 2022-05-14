@@ -1,5 +1,6 @@
 package idea.irpc.framework.core.server;
 
+import idea.irpc.framework.core.annotations.SPI;
 import idea.irpc.framework.core.common.RpcDecoder;
 import idea.irpc.framework.core.common.RpcEncoder;
 import idea.irpc.framework.core.common.config.PropertiesBootstrap;
@@ -7,30 +8,43 @@ import idea.irpc.framework.core.common.config.ServerConfig;
 import idea.irpc.framework.core.common.event.IRpcListenerLoader;
 import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.filter.IServerFilter;
+import idea.irpc.framework.core.filter.server.ServerAfterFilterChain;
+import idea.irpc.framework.core.filter.server.ServerBeforeFilterChain;
 import idea.irpc.framework.core.filter.server.ServerFilterChain;
 import idea.irpc.framework.core.registy.RegistryService;
 import idea.irpc.framework.core.registy.URL;
 import idea.irpc.framework.core.registy.zookeeper.AbstractRegister;
 import idea.irpc.framework.core.serialize.SerializeFactory;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadFactory;
 
 import static idea.irpc.framework.core.common.cache.CommonClientCache.EXTENSION_LOADER;
+import static idea.irpc.framework.core.common.constants.RpcConstants.DEFAULT_DECODE_CHAR;
 import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 import static idea.irpc.framework.core.common.cache.CommonServerCache.*;
 
 
 
 public class Server {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Server.class);
     private static EventLoopGroup bossGroup = null;
 
     private static EventLoopGroup workerGroup = null;
@@ -52,9 +66,12 @@ public class Server {
     public void startApplication() throws InterruptedException {
 
         //3.boos负责处理连接 worker负责处理读写
-        bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup();
+        bossGroup = new NioEventLoopGroup(1);
 
+        ThreadFactory threadFactory = new DefaultThreadFactory("irpc-NettyServerWorker",true);
+        int core = Runtime.getRuntime().availableProcessors() + 1;
+        System.out.println("core is " + core);
+        workerGroup = new NioEventLoopGroup(Math.min(core, 32), threadFactory);
         //1.启动器，负责组装netty组件，启动服务器
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup);
@@ -70,13 +87,17 @@ public class Server {
                 .option(ChannelOption.SO_RCVBUF, 16 * 1024)
                 .option(ChannelOption.SO_KEEPALIVE, true);
 
+        bootstrap.handler(new MaxConnectionLimitHandler(serverConfig.getMaxConnections()));
+
         bootstrap.childHandler(
                 //4.channel代表和客户端进行读写的通道Initializer初始化
                 new ChannelInitializer<SocketChannel>() {
                     @Override
                     //连接建立后，调用初始化方法
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        System.out.println("server Init provider........."+ System.currentTimeMillis());
+                        //LOGGER.info("server init provider-------");
+                        ByteBuf delimiter = Unpooled.copiedBuffer(DEFAULT_DECODE_CHAR.getBytes());
+                        socketChannel.pipeline().addLast(new DelimiterBasedFrameDecoder(serverConfig.getMaxServerRequestData(), delimiter));
                         socketChannel.pipeline().addLast(new RpcEncoder());
                         socketChannel.pipeline().addLast(new RpcDecoder());
                         socketChannel.pipeline().addLast(new ServerHandler());
@@ -108,15 +129,23 @@ public class Server {
         //过滤链技术初始化
         EXTENSION_LOADER.loadExtension(IServerFilter.class);
         LinkedHashMap<String, Class> iServerFilterClassMap = EXTENSION_LOADER_CLASS_CACHE.get(IServerFilter.class.getName());
-        ServerFilterChain serverFilterChain = new ServerFilterChain();
-        for (String iServerFilterKey : iServerFilterClassMap.keySet()) {
+        ServerBeforeFilterChain serverBeforeFilterChain = new ServerBeforeFilterChain();
+        ServerAfterFilterChain serverAfterFilterChain = new ServerAfterFilterChain();
+        //过滤器初始化环节新增前置过滤器和后置过滤器
+        for (String iServerFilterKey : iServerFilterClassMap.keySet()){
             Class iServerFilterClass = iServerFilterClassMap.get(iServerFilterKey);
-            if(iServerFilterClass==null){
+            if(iServerFilterClass == null){
                 throw new RuntimeException("no match iServerFilter type for " + iServerFilterKey);
             }
-            serverFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+            SPI spi = (SPI)iServerFilterClass.getDeclaredAnnotation(SPI.class);
+            if(spi != null && "before".equals(spi.value())){
+                serverBeforeFilterChain.addServerFilter((IServerFilter)iServerFilterClass.newInstance());
+            } else if(spi != null && "after".equals(spi.value())){
+                serverAfterFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+            }
         }
-        SERVER_FILTER_CHAIN = serverFilterChain;
+        SERVER_BEFORE_FILTER_CHAIN = serverBeforeFilterChain;
+        SERVER_AFTER_FILTER_CHAIN = serverAfterFilterChain;
     }
 
     public void exportService(ServiceWrapper serviceWrapper){

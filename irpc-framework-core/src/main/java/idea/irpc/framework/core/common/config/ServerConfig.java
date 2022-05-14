@@ -28,6 +28,16 @@ public class ServerConfig {
      */
     private Integer serverQueueSize;
 
+    /**
+     * 服务端最大能接受的数据包体积
+     */
+    private Integer maxServerRequestData;
+
+    /**
+     * 服务端最大连接数
+     */
+    private Integer maxConnections;
+
     public String getRegisterAddr() {
         return registerAddr;
     }
@@ -82,5 +92,21 @@ public class ServerConfig {
 
     public void setServerQueueSize(Integer serverQueueSize) {
         this.serverQueueSize = serverQueueSize;
+    }
+
+    public Integer getMaxServerRequestData() {
+        return maxServerRequestData;
+    }
+
+    public void setMaxServerRequestData(Integer maxServerRequestData) {
+        this.maxServerRequestData = maxServerRequestData;
+    }
+
+    public Integer getMaxConnections() {
+        return maxConnections;
+    }
+
+    public void setMaxConnections(Integer maxConnections) {
+        this.maxConnections = maxConnections;
     }
 }

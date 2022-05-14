@@ -12,7 +12,7 @@ public @interface IRpcReference {
     String group() default "default";
 
     //服务的令牌校验
-    String serviceToken() default "";
+    String serviceToken() default "dev";
 
     //服务的调用超时时间
     int timeOut() default 3000;

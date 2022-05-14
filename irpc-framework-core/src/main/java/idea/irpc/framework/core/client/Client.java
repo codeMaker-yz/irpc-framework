@@ -18,6 +18,8 @@ import idea.irpc.framework.core.router.IRouter;
 import idea.irpc.framework.core.serialize.SerializeFactory;
 import idea.irpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -25,6 +27,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import com.alibaba.fastjson.JSON;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import static idea.irpc.framework.core.common.cache.CommonClientCache.*;
+import static idea.irpc.framework.core.common.constants.RpcConstants.DEFAULT_DECODE_CHAR;
 import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 
 /**
@@ -45,8 +49,6 @@ import static idea.irpc.framework.core.spi.ExtensionLoader.EXTENSION_LOADER_CLAS
 public class Client {
 
     private Logger logger = LoggerFactory.getLogger(Client.class);
-
-    public static EventLoopGroup clientGroup = new NioEventLoopGroup();
 
     private ClientConfig clientConfig;
 
@@ -80,6 +82,8 @@ public class Client {
                     @Override
                     protected void initChannel(SocketChannel ch){
                         log.info("client Init provider........." + System.currentTimeMillis());
+                        ByteBuf delimiter = Unpooled.copiedBuffer(DEFAULT_DECODE_CHAR.getBytes());
+                        ch.pipeline().addLast(new DelimiterBasedFrameDecoder(clientConfig.getMaxServerRespDataSize(), delimiter));
                         ch.pipeline().addLast(new RpcEncoder());
                         ch.pipeline().addLast(new RpcDecoder());
                         ch.pipeline().addLast(new ClientHandler());
@@ -224,22 +228,29 @@ public class Client {
         rpcReferenceWrapper.setAimClass(DataService.class);
         rpcReferenceWrapper.setGroup("dev");
         rpcReferenceWrapper.setServiceToken("token-a");
-        rpcReferenceWrapper.setAsync(true);
-        rpcReferenceWrapper.setTimeOut(1000);
+        rpcReferenceWrapper.setAsync(false);
+        rpcReferenceWrapper.setTimeOut(3000);
 //        rpcReferenceWrapper.setUrl("localhost:9093");
         DataService dataService = rpcReference.get(rpcReferenceWrapper);
         client.doSubscribeService(DataService.class);
         ConnectionHandler.setBootstrap(client.getBootstrap());
         client.doConnectServer();
         client.startClient();
+        int k = 1000;
         for (int i = 0; i < 5; i++) {
             try {
-                String result = dataService.sendData("test");
+                StringBuilder s = new StringBuilder();
+                for (int j = 0; j < k; j++) {
+                    s.append('1');
+                }
+                k /= 10;
+                String result = dataService.sendData(s.toString());
                 System.out.println(result);
                 Thread.sleep(1000);
             }catch (Exception e){
                 e.printStackTrace();
             }
+
         }
     }
 

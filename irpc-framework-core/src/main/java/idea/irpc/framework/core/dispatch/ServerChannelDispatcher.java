@@ -2,6 +2,7 @@ package idea.irpc.framework.core.dispatch;
 
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.RpcProtocol;
+import idea.irpc.framework.core.common.exception.IRpcException;
 import idea.irpc.framework.core.server.ServerChannelReadData;
 
 import java.lang.reflect.Method;
@@ -23,9 +24,9 @@ public class ServerChannelDispatcher {
 
     public void init(int queueSize, int bizThreadNums){
         RPC_DATA_QUEUE = new ArrayBlockingQueue<>(queueSize);
-        executorService = new ThreadPoolExecutor(bizThreadNums,bizThreadNums,
-                0L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(512));
+        executorService = new ThreadPoolExecutor(0,Integer.MAX_VALUE,
+                60L, TimeUnit.MILLISECONDS,
+                new SynchronousQueue<>());
 
     }
 
@@ -43,37 +44,57 @@ public class ServerChannelDispatcher {
             while (true){
                 try {
                     ServerChannelReadData serverChannelReadData = RPC_DATA_QUEUE.take();
-                    executorService.submit(new Runnable() {
+                    executorService.execute(new Runnable() {
                         @Override
                         public void run() {
-                            try {
                                 RpcProtocol rpcProtocol = serverChannelReadData.getRpcProtocol();
                                 RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
                                 //执行过滤链路
-                                SERVER_FILTER_CHAIN.doFilter(rpcInvocation);
+                                try {
+                                    //前置过滤器
+                                    SERVER_BEFORE_FILTER_CHAIN.doFilter(rpcInvocation);
+                                } catch (Exception cause){
+                                    //针对自定义异常进行捕获，并且返回异常信息给客户端
+                                    if(cause instanceof IRpcException){
+                                        IRpcException rpcException = ((IRpcException) cause);
+                                        RpcInvocation reqParam = rpcException.getRpcInvocation();
+                                        rpcInvocation.setE(rpcException);
+                                        byte[] body = SERVER_SERIALIZE_FACTORY.serialize(reqParam);
+                                        RpcProtocol respRpcProtocol = new RpcProtocol(body);
+                                        serverChannelReadData.getChannelHandlerContext().writeAndFlush(respRpcProtocol);
+                                        return;
+                                    }
+                                }
                                 Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
                                 Method[] methods = aimObject.getClass().getDeclaredMethods();
                                 Object result = null;
                                 for(Method method : methods){
                                     if(method.getName().equals(rpcInvocation.getTargetMethod())){
                                         if(method.getReturnType().equals(Void.TYPE)){
-                                            method.invoke(aimObject, rpcInvocation.getArgs());
+                                            try {
+                                                method.invoke(aimObject, rpcInvocation.getArgs());
+                                            } catch (Exception e){
+                                                rpcInvocation.setE(e);
+                                            }
                                         } else {
-                                            result = method.invoke(aimObject,rpcInvocation.getArgs());
+                                            try {
+                                                result = method.invoke(aimObject,rpcInvocation.getArgs());
+                                            } catch (Exception e){
+                                                rpcInvocation.setE(e);
+                                            }
                                         }
                                         break;
                                     }
                                 }
                                 rpcInvocation.setResponse(result);
+                                //后置过滤器
+                                SERVER_AFTER_FILTER_CHAIN.doFilter(rpcInvocation);
                                 RpcProtocol respRpcProtocol = new RpcProtocol(SERVER_SERIALIZE_FACTORY.serialize(rpcInvocation));
                                 serverChannelReadData.getChannelHandlerContext().writeAndFlush(respRpcProtocol);
-                            } catch (Exception e){
-                                e.printStackTrace();
-                            }
                         }
                     });
-                } catch (InterruptedException e){
-                    e.printStackTrace();
+                } catch (Exception e){
+                    throw new RuntimeException(e);
                 }
             }
         }

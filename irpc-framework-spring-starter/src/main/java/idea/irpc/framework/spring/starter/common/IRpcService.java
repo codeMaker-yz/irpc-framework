@@ -13,5 +13,5 @@ public @interface IRpcService {
 
     String group() default "default";
 
-    String serviceToken() default "";
+    String serviceToken() default "dev";
 }

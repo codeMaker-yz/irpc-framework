@@ -22,33 +22,20 @@ public class RpcDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
-        log.info("decoding..........");
+        //log.info("decoding..........");
         if(byteBuf.readableBytes() >= BASE_LENGTH){
-            // 防止数据包过大
-            if(byteBuf.readableBytes() > 4056){
-                byteBuf.skipBytes(byteBuf.readableBytes());
-            }
-            int beginReader;
-            while (true){
-                beginReader = byteBuf.readerIndex();
-                byteBuf.markReaderIndex();
-                if(byteBuf.readShort() == MAGIC_NUMBER){
-                    break;
-                }else{
-                    channelHandlerContext.close();
-                    return;
-                }
-            }
-            //对应RpcProtocol对象的contentLength字段
-            int length = byteBuf.readInt();
-            //如果数据包不是完整的，需要重置下读索引
-            if(byteBuf.readableBytes() < length){
-                byteBuf.readerIndex(beginReader);
+            if(!(byteBuf.readShort() == MAGIC_NUMBER)){
+                channelHandlerContext.close();
                 return;
             }
-            byte[] data = new byte[length];
-            byteBuf.readBytes(data);
-            RpcProtocol rpcProtocol = new RpcProtocol(data);
+            int length = byteBuf.readInt();
+            if(byteBuf.readableBytes() < length){
+                channelHandlerContext.close();
+                return;
+            }
+            byte[] body = new byte[length];
+            byteBuf.readBytes(body);
+            RpcProtocol rpcProtocol = new RpcProtocol(body);
             list.add(rpcProtocol);
         }
     }

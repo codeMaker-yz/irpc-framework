@@ -18,7 +18,7 @@
         <jboss-marshalling-river.version>1.4.11.Final</jboss-marshalling-river.version>
         <jboss-marshalling-serial.version>1.4.11.Final</jboss-marshalling-serial.version>
         <slf4j-api.version>1.7.13</slf4j-api.version>
-        <zookeeper.version>3.5.7</zookeeper.version>
+        <zookeeper.version>3.7.0</zookeeper.version>
         <zkClient.version>0.7</zkClient.version>
         <curator.version>2.12.0</curator.version>
         <hessian.version>4.0.62</hessian.version>

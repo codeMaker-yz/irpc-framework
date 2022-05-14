@@ -1,5 +1,6 @@
 package idea.irpc.framework.core.filter.server;
 
+import idea.irpc.framework.core.annotations.SPI;
 import idea.irpc.framework.core.common.RpcInvocation;
 import idea.irpc.framework.core.common.utils.CommonUtils;
 import idea.irpc.framework.core.filter.IServerFilter;
@@ -12,6 +13,8 @@ import static idea.irpc.framework.core.common.cache.CommonServerCache.PROVIDER_S
  * @author £ºMr.Zhang
  * @date £ºCreated in 2022/4/1 13:17
  */
+
+@SPI("before")
 public class ServerTokenFilterImpl implements IServerFilter {
     @Override
     public void doFilter(RpcInvocation rpcInvocation) {
